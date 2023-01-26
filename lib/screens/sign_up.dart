@@ -1,9 +1,10 @@
+import 'package:cicerone/screens/verify_mail_view.dart';
 import 'package:flutter/material.dart';
-import 'package:cicerone/screens/home_screen.dart';
 import 'package:cicerone/screens/log_in.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cicerone/firebase_options.dart';
+import 'package:cicerone/screens/show_error_dialog.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({Key? key}) : super(key: key);
@@ -13,23 +14,26 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
-  late final TextEditingController _Username;
+  late final TextEditingController _username;
   late final TextEditingController _email;
   late final TextEditingController _password;
+  late final TextEditingController _confrmpswrd;
 
   @override
   void initState() {
-    _Username = TextEditingController();
+    _username = TextEditingController();
     _email = TextEditingController();
     _password = TextEditingController();
+    _confrmpswrd = TextEditingController();
     super.initState();
   }
 
   @override
   void dispose() {
-    _Username.dispose();
+    _username.dispose();
     _email.dispose();
     _password.dispose();
+    _confrmpswrd.dispose();
     super.dispose();
   }
 
@@ -48,7 +52,7 @@ class _SignupPageState extends State<SignupPage> {
                     fontSize: 25,
                     fontWeight: FontWeight.bold)),
             TextField(
-              controller: _Username,
+              controller: _username,
               decoration: const InputDecoration(
                   icon: Icon(Icons.person),
                   labelText: 'Username',
@@ -82,6 +86,20 @@ class _SignupPageState extends State<SignupPage> {
                     fontWeight: FontWeight.normal),
               ),
             ),
+            TextField(
+              controller: _confrmpswrd,
+              obscureText: true,
+              enableSuggestions: false,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                icon: Icon(Icons.password),
+                labelText: 'Confirm Password',
+                labelStyle: TextStyle(
+                    color: Colors.black12,
+                    fontSize: 12,
+                    fontWeight: FontWeight.normal),
+              ),
+            ),
             Container(
                 height: 50,
                 padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
@@ -91,19 +109,40 @@ class _SignupPageState extends State<SignupPage> {
                     await Firebase.initializeApp(
                       options: DefaultFirebaseOptions.currentPlatform,
                     );
-                    final username = _Username.text;
                     final email = _email.text;
                     final password = _password.text;
-                    final userCredential = await FirebaseAuth.instance
-                        .createUserWithEmailAndPassword(
-                            email: email, password: password)
-                        .then((value) {
-                      print("Created new account");
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => HomePage()));
-                    }).onError((error, stackTrace) {
-                      print("Error ${error.toString()}");
-                    });
+                    int flag = 0;
+                    if (_password.text == _confrmpswrd.text) {
+                      try {
+                        await FirebaseAuth.instance
+                            .createUserWithEmailAndPassword(
+                          email: email,
+                          password: password,
+                        );
+                        final user = FirebaseAuth.instance.currentUser;
+                        user?.updateDisplayName(_username.text);
+                        await user?.sendEmailVerification();
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const VerifyEmailView()));
+                      } on FirebaseAuthException catch (e) {
+                        if (e.code == 'weak-password') {
+                          await showErrorDialog(context, 'Weak Password!');
+                        } else if (e.code == 'email-already-in-use') {
+                          await showErrorDialog(
+                              context, 'Account already Exists!');
+                        } else if (e.code == 'invalid-email') {
+                          await showErrorDialog(
+                              context, 'Invalid Email Adress');
+                        } else {
+                          await showErrorDialog(context, 'Error: ${e.code}');
+                        }
+                      }
+                    } else {
+                      await showErrorDialog(
+                          context, 'Confirm Password Does not match!');
+                    }
                   },
                 )),
             TextButton(

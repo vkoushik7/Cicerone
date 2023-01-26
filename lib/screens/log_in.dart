@@ -1,8 +1,8 @@
+import 'package:cicerone/screens/show_error_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cicerone/firebase_options.dart';
-
 import 'home_screen.dart';
 
 class LoginPage extends StatefulWidget {
@@ -83,16 +83,38 @@ class _LoginPageState extends State<LoginPage> {
                     );
                     final email = _email.text;
                     final password = _password.text;
-                    final userCredential = await FirebaseAuth.instance
-                        .signInWithEmailAndPassword(
-                            email: email, password: password)
-                        .then((value) {
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => HomePage()));
-                    });
-                    //print(userCredential);
+                    try {
+                      final user = await FirebaseAuth.instance
+                          .signInWithEmailAndPassword(
+                              email: email, password: password)
+                          .then((value) => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const HomePage())));
+                    } on FirebaseAuthException catch (e) {
+                      if (e.code == 'user-not-found') {
+                        await showErrorDialog(context, 'User not Found!');
+                      } else if (e.code == 'wrong-password') {
+                        await showErrorDialog(context, 'Incorrect Password!');
+                      } else {
+                        await showErrorDialog(context, 'Error: ${e.code}');
+                      }
+                    }
                   },
                 )),
+            TextButton(
+                onPressed: () {
+                  final email = _email.text;
+                  if (email.isEmpty) {
+                    showErrorDialog(
+                        context, 'Enter your email to reset password');
+                  } else {
+                    FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                    showErrorDialog(
+                        context, 'Password reset link sent to your email');
+                  }
+                },
+                child: const Text('Forgot Password?')),
             TextButton(
                 onPressed: () {
                   Navigator.pop(context);

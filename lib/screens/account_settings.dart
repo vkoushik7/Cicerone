@@ -1,15 +1,157 @@
 import 'package:flutter/material.dart';
-import 'package:cicerone/screens/home_screen.dart';
-import 'package:cicerone/screens/log_in.dart';
+import 'package:cicerone/screens/show_error_dialog.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cicerone/firebase_options.dart';
 
-class AccPage extends StatelessWidget {
+class AccPage extends StatefulWidget {
   const AccPage({super.key});
 
   @override
+  State<AccPage> createState() => _AccPageState();
+}
+
+String uname = '';
+String umail = '';
+
+class _AccPageState extends State<AccPage> {
+  late final TextEditingController _Username;
+  late final TextEditingController _email;
+  late final TextEditingController _password;
+  late final TextEditingController _confrmpswrd;
+
+  @override
+  void initState() {
+    _Username = TextEditingController();
+    _email = TextEditingController();
+    _password = TextEditingController();
+    _confrmpswrd = TextEditingController();
+    final user = FirebaseAuth.instance.currentUser;
+    String? temp = user?.displayName;
+    uname = temp.toString();
+    temp = user?.email;
+    umail = temp.toString();
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _Username.dispose();
+    _email.dispose();
+    _password.dispose();
+    _confrmpswrd.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold();
+    return Scaffold(
+        appBar: AppBar(
+          title: const Text('Account Settings'),
+        ),
+        body: Container(
+          alignment: Alignment.center,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const CircleAvatar(
+                  radius: 52,
+                  backgroundImage: AssetImage('assets/profilepic.jpg')),
+              const SizedBox(
+                height: 12,
+              ),
+              TextField(
+                controller: _Username,
+                decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    icon: const Icon(Icons.person),
+                    labelText: '$uname',
+                    labelStyle: const TextStyle(
+                        color: Colors.black12,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(
+                height: 12,
+              ),
+              TextField(
+                controller: _email,
+                decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    icon: const Icon(Icons.person),
+                    labelText: '$umail',
+                    labelStyle: const TextStyle(
+                        color: Colors.black12,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(
+                height: 12,
+              ),
+              TextField(
+                controller: _password,
+                obscureText: true,
+                decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    icon: Icon(Icons.person),
+                    labelText: 'Password',
+                    labelStyle: TextStyle(
+                        color: Colors.black12,
+                        fontSize: 12,
+                        fontWeight: FontWeight.normal)),
+              ),
+              const SizedBox(
+                height: 12,
+              ),
+              TextField(
+                controller: _confrmpswrd,
+                obscureText: true,
+                decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    icon: Icon(Icons.person),
+                    labelText: 'Confirm Password',
+                    labelStyle: TextStyle(
+                        color: Colors.black12,
+                        fontSize: 12,
+                        fontWeight: FontWeight.normal)),
+              ),
+              const SizedBox(
+                height: 12,
+              ),
+              Container(
+                  height: 50,
+                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+                  child: ElevatedButton(
+                    child: const Text('Submit'),
+                    onPressed: () async {
+                      await Firebase.initializeApp(
+                        options: DefaultFirebaseOptions.currentPlatform,
+                      );
+                      final email = _email.text;
+                      final password = _password.text;
+                      if (_password.text == _confrmpswrd.text) {
+                        try {
+                          final user = FirebaseAuth.instance.currentUser;
+                          user?.updateEmail(email);
+                          user?.updateDisplayName(_Username.text);
+                        } on FirebaseAuthException catch (e) {
+                          if (e.code == 'weak-password') {
+                            await showErrorDialog(context, 'Weak Password!');
+                          } else if (e.code == 'invalid-email') {
+                            await showErrorDialog(
+                                context, 'Invalid Email Adress');
+                          } else {
+                            await showErrorDialog(context, 'Error: ${e.code}');
+                          }
+                        }
+                      } else {
+                        await showErrorDialog(
+                            context, 'Confirm Password Does not match!');
+                      }
+                    },
+                  )),
+            ],
+          ),
+        ));
   }
 }
