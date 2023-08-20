@@ -2,4 +2,4 @@
 
 Navigation App for Museums and Art Galleries
 
-Flutter with Firebase and Rive
+Tech used: Flutter with Firebase and Rive Animation
